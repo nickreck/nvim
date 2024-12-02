@@ -9,7 +9,7 @@ return {
     -- https://github.com/nvim-neotest/nvim-nio
     'nvim-neotest/nvim-nio',
     -- https://github.com/theHamsta/nvim-dap-virtual-text
-    'theHamsta/nvim-dap-virtual-text', -- inline variable text while debugging
+    'theHamsta/nvim-dap-virtual-text',   -- inline variable text while debugging
     -- https://github.com/nvim-telescope/telescope-dap.nvim
     'nvim-telescope/telescope-dap.nvim', -- telescope integration with dap
   },
@@ -88,7 +88,7 @@ return {
       max_value_lines = 100
     }
   },
-  config = function (_, opts)
+  config = function(_, opts)
     local dap = require('dap')
     require('dapui').setup(opts)
 
@@ -109,27 +109,6 @@ return {
     -- Add dap configurations based on your language/adapter settings
     -- https://github.com/mfussenegger/nvim-dap/wiki/Debug-Adapter-installation
     dap.configurations.java = {
-      -- {
-        -- name = "Debug Launch (2GB)";
-        -- type = 'java';
-        -- request = 'launch';
-        -- vmArgs = "" ..
-        --   "-Xmx2g "
-      -- },
-      -- {
-        -- name = "Debug Attach (8000)";
-        -- type = 'java';
-        -- request = 'attach';
-        -- hostName = "127.0.0.1";
-        -- port = 8000;
-      -- },
-      -- {
-        -- name = "Debug Attach (5005)";
-        -- type = 'java';
-        -- request = 'attach';
-        -- hostName = "127.0.0.1";
-        -- port = 5005;
-      -- },
       {
         name = "Spotlight run config",
         type = "java",
@@ -148,9 +127,55 @@ return {
         -- `nvim-jdtls` would automatically populate this property
         -- modulePaths = {},
         vmArgs = "" ..
-          "-Xmx2g ",
+            "-Xmx2g ",
       },
+    }
+
+    -- GO CONFIG --
+    dap.adapters.delve = function(callback, config)
+      if config.mode == 'remote' and config.request == 'attach' then
+        callback({
+          type = 'server',
+          host = config.host or '127.0.0.1',
+          port = config.port or '38697'
+        })
+      else
+        callback({
+          type = 'server',
+          port = '${port}',
+          executable = {
+            command = 'dlv',
+            args = { 'dap', '-l', '127.0.0.1:${port}', '--log', '--log-output=dap' },
+            detached = vim.fn.has("win32") == 0,
+          }
+        })
+      end
+    end
+
+
+    -- https://github.com/go-delve/delve/blob/master/Documentation/usage/dlv_dap.md
+    dap.configurations.go = {
+      {
+        type = "delve",
+        name = "Debug",
+        request = "launch",
+        program = "${file}"
+      },
+      {
+        type = "delve",
+        name = "Debug test", -- configuration for debugging test files
+        request = "launch",
+        mode = "test",
+        program = "${file}"
+      },
+      -- works with go.mod packages and sub packages
+      {
+        type = "delve",
+        name = "Debug test (go.mod)",
+        request = "launch",
+        mode = "test",
+        program = "./${relativeFileDirname}"
+      }
     }
   end
 }
-
